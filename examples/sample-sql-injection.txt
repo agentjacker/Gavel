@@ -1,0 +1,56 @@
+VULNERABILITY REPORT: SQL Injection in User Search
+
+Severity: HIGH
+CWE: CWE-89 (SQL Injection)
+
+Description:
+The user search functionality in the application is vulnerable to SQL injection attacks. The search parameter is not properly sanitized before being used in a SQL query, allowing attackers to inject arbitrary SQL commands.
+
+Affected Component:
+- File: src/api/users.py
+- Function: search_users()
+- Line: Approximately line 45
+
+Vulnerability Details:
+The function constructs a SQL query by directly concatenating user input without using parameterized queries or proper escaping:
+
+```python
+def search_users(search_term):
+    query = f"SELECT * FROM users WHERE username LIKE '%{search_term}%'"
+    results = db.execute(query)
+    return results
+```
+
+Attack Vector:
+An attacker can supply malicious input like:
+`test%' OR '1'='1`
+
+This would result in the following SQL query:
+```sql
+SELECT * FROM users WHERE username LIKE '%test%' OR '1'='1%'
+```
+
+The OR '1'='1' condition is always true, causing the query to return all users in the database, bypassing intended access controls.
+
+Impact:
+- Unauthorized access to sensitive user data
+- Potential for data exfiltration
+- Database manipulation or deletion
+- Possible complete database compromise
+
+Proof of Concept:
+```bash
+curl -X GET "https://example.com/api/users/search?q=test%27%20OR%20%271%27=%271"
+```
+
+Recommendation:
+Use parameterized queries to prevent SQL injection:
+
+```python
+def search_users(search_term):
+    query = "SELECT * FROM users WHERE username LIKE ?"
+    results = db.execute(query, (f"%{search_term}%",))
+    return results
+```
+
+Or use an ORM that handles parameterization automatically.
