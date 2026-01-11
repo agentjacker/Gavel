@@ -1,6 +1,6 @@
 # 🔨 Gavel
 
-**AI-Powered Vulnerability Report Verification Tool**
+**AI-Powered Vulnerability Report Triaging Tool**
 
 Gavel helps security researchers and developers verify vulnerability reports before submission, reducing noise and false positives in bug bounty programs.
 
