@@ -6,4 +6,4 @@ Follow the [quick start](QUICKSTART.md) to run it locally.
 
 [![Gavel launch video: vulnerability triage that understands your system](docs/gavel-demo.jpg)](docs/gavel-demo.mp4)
 
-The 71-second walkthrough uses the bundled demo service and topology; its model responses are scripted.
+
