@@ -5,9 +5,9 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="gavel-verify",
-    version="0.1.0",
+    version="0.5.0",
     author="Gavel Team",
-    description="AI-powered vulnerability report verification tool",
+    description="Self-hosted contextual vulnerability triage and attack-path analysis",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/yourusername/gavel",
@@ -40,6 +40,7 @@ setup(
     entry_points={
         "console_scripts": [
             "gavel=gavel.cli:main",
+            "gavel-server=gavel.server:main",
         ],
     },
 )

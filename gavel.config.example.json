@@ -1,0 +1,12 @@
+{
+  "organization_id": "example-company",
+  "name": "Example Company Security",
+  "database": "data/gavel.db",
+  "admin_token_env": "GAVEL_ADMIN_TOKEN",
+  "repositories": [
+    { "id": "demo-service", "path": "examples/demo-app", "revision": "demo-v1" }
+  ],
+  "topology_file": "examples/topology.json",
+  "model": {},
+  "destinations": {}
+}

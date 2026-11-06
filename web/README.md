@@ -1,98 +1,45 @@
-# Gavel Web UI
+# Gavel security workspace
 
-Clean, terminal-inspired web interface for vulnerability report verification.
+The web app is a browser interface for the self-hosted Python service. It has a company workspace for private triage and a researcher portal for submissions and receipt-based status checks.
 
-## Features
+## Run
 
-- **Black & White Design**: Crisp, minimal interface inspired by terminal aesthetics
-- **Large Report Support**: Paste reports of any size
-- **Real-time Verification**: Get instant VALID/INVALID verdicts
-- **Multiple Input Methods**:
-  - GitHub URLs (public repositories)
-  - File upload (multiple files or zip archives)
-- **Code Analysis**: Actually fetches and analyzes real code
-- **AI Reasoning Trace**: See step-by-step how the AI reached its verdict
-- **Privacy-Focused**: No data storage, all processing is in-memory
-- **Model Selection**: Choose between Opus 4.5 (accurate) or Sonnet 4.5 (fast)
-- **PoC Generation**: Optionally generate proof-of-concept exploits
+Start the Python service using the root repository instructions, then:
 
-## Development
-
-```bash
-# Install dependencies
-npm install
-
-# Create .env file
-cp .env.example .env
-# Add your API keys to .env
-
-# Run development server
+```sh
+cd web
+npm ci
+cp .env.example .env.local
 npm run dev
 ```
 
-Visit `http://localhost:3000`
+Open http://localhost:3000. Set `GAVEL_BACKEND_URL` to the service's private address in `.env.local`; the default is `http://127.0.0.1:8080`. This setting stays on the web server. Model keys belong on the Python service, never in a `NEXT_PUBLIC_` variable.
 
-## Deployment to Vercel
+Use the operator token configured on the service to open the company workspace. It is held only in the current tab's React memory; locking or reloading the workspace clears it. Researcher submission tokens and receipt tokens are separate credentials. Receipt tokens grant access to only the associated submission's public status. Save the private receipt after submitting; the app does not persist it.
 
-```bash
-# Install Vercel CLI
-npm i -g vercel
+The organization inventory displays source-backed code context and administrator-declared topology. Import repositories and topology manifests through the trusted service administration workflow. The researcher endpoint cannot choose a repository, upload code, or control internal paths.
 
-# Deploy
-vercel
+The risk policy form lets operators select critical company assets, choose a context freshness limit, turn automatic owner routing on or off, and record expiring risk acceptances. Each acceptance names an asset and finding primitive, binds its evidence fingerprint, records a business reason, and sets an expiry in the browser’s local time. Choosing a known primitive fills its fingerprint automatically. Changed cited evidence invalidates the acceptance. Re-evaluate findings after policy updates to see the current decision. A collapsed advanced view shows the saved configuration for inspection.
 
-# Set environment variables in Vercel dashboard:
-# - ANTHROPIC_API_KEY or OPENROUTER_API_KEY
+## Deployment
+
+```sh
+npm run build
+npm start
 ```
 
-Or use the Vercel dashboard:
-1. Import repository
-2. Add environment variables
-3. Deploy
+Deploy the app behind TLS and point `GAVEL_BACKEND_URL` at the service on a private network. Do not expose development mode publicly. Keep the backend's operator token private; do not put it in the web environment. The web app forwards explicit bearer credentials from the current request and never forwards browser cookies.
 
-## API Keys
+The API proxy allows only the documented public and operator routes. It accepts JSON bodies up to 128 KiB, enforces the limit while streaming, rejects redirects, and reconstructs bounded JSON responses without forwarding upstream headers or cookies. The retired `/api/verify` endpoint returns `410 Gone`. Arbitrary uploads, cloning, shell execution, and direct model calls are removed from web intake.
 
-You need either:
-- `ANTHROPIC_API_KEY` - Direct Anthropic API access (recommended)
-- `OPENROUTER_API_KEY` - Access via OpenRouter
+## Verification
 
-Set these in your `.env.local` file for development or in Vercel environment variables for production.
+```sh
+npm run build
+npm run lint
+npm test
+```
 
-## Architecture
+Proxy integration tests run the built app against a local fake service. They cover path allowlisting, bearer/cookie isolation, request byte limits including chunked bodies, invalid JSON, response limits, redirects, and retirement of the legacy endpoint.
 
-- **Next.js 14** with App Router
-- **TypeScript** for type safety
-- **Tailwind CSS** for styling
-- **Server-side API routes** for secure API key handling
-- **No database** - all processing is stateless
-
-## Security
-
-- Input sanitization to prevent prompt injection
-- No data persistence between requests
-- API keys stored securely in environment variables
-- Read-only operations only
-
-## How to Use Local Files
-
-You have two options for analyzing local code:
-
-### Option 1: Upload Individual Files
-1. Select "Upload Files/Zip" mode
-2. Click the file input and select multiple code files
-3. Supported: .py, .js, .ts, .jsx, .tsx, .java, .cpp, .c, .go, .rs, .sol
-
-### Option 2: Upload Zip Archive
-1. Zip your codebase: `zip -r myproject.zip myproject/`
-2. Select "Upload Files/Zip" mode
-3. Upload the .zip file (max 50MB)
-4. Gavel will extract and search through it
-
-## Limitations
-
-The web version has some limitations compared to the CLI:
-- File size limit: 50MB total
-- No batch processing of multiple reports
-- Zip extraction requires unzip command on server
-
-For processing very large codebases or batch operations, use the Python CLI version.
+Framework: Next.js 15.5.29 with React 18.3.1. The November 3, 2026 [Next.js advisory](https://github.com/vercel/next.js/security/advisories/GHSA-pc58-hwjq-p385) lists 15.5.29 as patched for fetched-response framing disclosure.

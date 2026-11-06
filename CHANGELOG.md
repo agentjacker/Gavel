@@ -1,5 +1,22 @@
 # Changelog
 
+## [v0.5.0] - 2026-11-06
+
+### Contextual, self-hosted vulnerability intake
+
+- Added a single-organization Python API, durable SQLite queue, private researcher receipts, authenticated operator workspace, and fixed public assessment outcomes.
+- Added persistent source-owned context: incremental file hashes, original cited source lines, bounded Python definition/call syntax graphs, declared deployment topology, source freshness, repository bindings, ownership and graph revision invalidation.
+- Separated technical validity, organizational applicability and risk disposition. Missing evidence, incomplete retrieval and unusable model output require review; AI authorship is irrelevant to validity.
+- Added cited, asset-scoped primitives and bounded conditional chain analysis. Unknown and blocked relationships grant no movement; action priority considers the finding's contribution beyond existing access.
+- Added protected-asset policy, expiring evidence-bound risk acceptances and periodic refresh of saved decisions. Security analysis uses the complete saved decision dataset independently of bounded inbox listings.
+- Added operator-configured Jira/Slack delivery, owner mapping, stable event IDs, bounded retries and cancellation of pending events when graph, policy, freshness or risk changes invalidate eligibility. Delivery remains at least once.
+- Replaced the web upload/clone endpoint with bounded JSON intake and an allowlisted proxy. Models have no tools; reports cannot select repositories, execute code, mutate context or choose destinations.
+- Added a local source/topology demo, container configuration, regression tests, architecture documentation and an explicit threat model. Retained the one-shot CLI with an uncertain/review result instead of treating missing evidence as invalid.
+
+### Current boundaries
+
+Collection is a bounded static source index plus trusted topology declarations, not automatic infrastructure discovery or a semantic call graph. Conclusions are static hypotheses; there is no runtime exploit runner. Source state is current-only, secret exclusion is imperfect, and the deployment assumes one worker per SQLite database with static operator credentials. External models and live Jira/Slack delivery require operator configuration. Historical entries below describe earlier versions and are not current security guarantees.
+
 ## [v0.4.0] - 2025-01-08
 
 ### Major Update: Universal File Format Support + Security Hardening

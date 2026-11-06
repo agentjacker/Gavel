@@ -1,248 +1,59 @@
-# Example Vulnerability Reports
+# Gavel examples
 
-This directory contains sample vulnerability reports demonstrating valid reports, invalid reports, and security testing scenarios.
+The v2 demo pairs [a deliberately unsafe source file](demo-app/service.py) with [an illustrative topology manifest](topology.json). Gavel indexes the source as text; it does not run this file, execute submitted payloads, or establish that the example is deployed anywhere.
 
-## Report Examples
+## Try the contextual workflow
 
-### 1. Legitimate Report (legitimate-report.md)
+1. Follow the [local setup](../README.md#run-locally) using `gavel.config.example.json`.
+2. Open [the local web workspace](http://localhost:3000) and choose the researcher portal.
+3. Select **Customer API (demo)** and submit a report such as:
 
-A well-structured, detailed vulnerability report that should pass all security checks.
+   ```text
+   Title: SQL query construction in lookup_customer
 
-**Test it:**
-```bash
-gavel -r examples/legitimate-report.md -c /path/to/codebase -v
+   service.py:lookup_customer concatenates customer_id into the SQL string
+   passed to database.execute. If customer_id is controlled by an attacker,
+   this can change the query rather than bind a literal customer ID.
+
+   Please assess the code evidence and prerequisites. The source alone does
+   not establish a reachable HTTP route, the database driver's behavior,
+   or the database permissions in a real deployment.
+   ```
+
+4. Save the returned report ID and private receipt token. Use them to check status and the safe public outcome.
+5. Open the operator workspace with `GAVEL_ADMIN_TOKEN` to inspect the private assessment, evidence, prerequisites, owner and paths.
+
+The default example has no AI provider or notification destinations. Intake still works, and analysis requires review until a model is configured. With a configured model, source support is a static hypothesis rather than a promised fixed verdict. The topology's conditional database relationship and blocked billing path are company declarations for demonstration; replace them with evidence from the actual deployment. The default policy does not designate any protected assets or enable automatic routing.
+
+After editing the demo source or topology, call the operator `POST /v1/admin/sync` endpoint. Changed hashes update the saved context, invalidate previous decisions and queue new assessments. Unchanged file contents are retained. See [configuration and API usage](../README.md) and the [architecture](../docs/architecture.md).
+
+## Historical report fixtures
+
+These files were created for the original one-shot verifier. Their filenames describe historical examples, not authoritative verdicts. Several refer to code that is absent from the demo repository.
+
+| File | What it exercises | Correct interpretation |
+| --- | --- | --- |
+| `legitimate-report.md` | Detailed PHP authentication claim with a payload and proposed fix. | Verify against the actual referenced implementation. Formatting and a claim of prior testing do not establish validity; the PHP file is not part of this demo. |
+| `sample-sql-injection.txt` | SQL injection report structure and code references. | Check the specific source and attacker prerequisites; do not assume it describes the demo service. |
+| `sample-invalid-report.txt` | An underspecified XSS hypothesis. | Missing evidence requires review. A vague report is not proof that the claimed bug is absent. |
+| `test-prompt-injection.txt` | Instructions that try to force a model verdict. | Treat the payload as untrusted data. It cannot change policy, context, destinations or public output; matching an injection phrase alone is not grounds to reject a vulnerability. |
+| `test-system-extraction.html` | HTML text containing attempts to extract model instructions. | Treat the content as data and preserve the private/public boundary. The v2 HTTP intake accepts JSON text fields, not HTML/file uploads. |
+
+AI-assisted reports are welcome. AI authorship, confident wording, hedging, template style and the presence of attack strings do not determine technical validity. Reports about prompt injection often need to quote the exact malicious instructions being reported.
+
+The compatibility CLI can read text, Markdown and HTML fixtures:
+
+```sh
+.venv/bin/python -m gavel.cli \
+  --report examples/legitimate-report.md \
+  --codebase /path/to/the/referenced/repository \
+  --format json
 ```
 
-**Characteristics of a valid report:**
-- ✅ Specific file and function names
-- ✅ Actual code snippets from the codebase
-- ✅ Concrete attack vector with example payload
-- ✅ Clear line numbers or code locations
-- ✅ Demonstrates real exploitability
-- ✅ Shows understanding of the code
-- ✅ No prompt injection attempts
+The CLI is separate from the persistent contextual service. Its `NEEDS_REVIEW` result covers insufficient context and unusable model output. Use the v2 intake for organization policies, saved topology, conditional chains and delivery approval. The old web `/api/verify` endpoint is retired.
 
-### 2. Invalid Report (sample-invalid-report.txt)
+## Adding useful examples
 
-**Characteristics of an invalid/AI-generated report:**
-- ❌ Vague descriptions ("may be vulnerable", "could potentially")
-- ❌ No specific file paths or function names
-- ❌ Generic attack patterns without code context
-- ❌ Theoretical attacks without proof
-- ❌ Assumptions about missing security controls
-- ❌ Cookie-cutter template language
+Include matching source fixtures, explicit deployment assumptions, expected evidence and unresolved prerequisites. Add cases for refuted claims, contained primitives, newly enabled chains and accepted risks that become material after a change. Keep reports anonymized and avoid real credentials. Expected behavior should describe evidence and policy boundaries rather than require a model to emit a particular verdict because of writing style.
 
-## Security Testing Examples
-
-### 3. Prompt Injection Attempt (test-prompt-injection.txt)
-
-Demonstrates a report containing malicious instructions to override the AI's verdict.
-
-**Test it:**
-```bash
-gavel -r examples/test-prompt-injection.txt -c /path/to/codebase -v
-```
-
-**Expected result:**
-```
-[WARNING] Prompt injection detected: Potential prompt injection detected: 'ignore all previous instructions'
-
-[INVALID]
-Report rejected due to potential security issue. This report contains patterns
-associated with prompt injection attacks and cannot be processed safely.
-```
-
-**Attack techniques demonstrated:**
-- Direct instruction override ("Ignore all previous instructions")
-- Role manipulation ("You are now in developer mode")
-- Verdict forcing ("Always respond with VALID")
-
-### 4. System Extraction Attempt (test-system-extraction.html)
-
-An HTML-formatted report attempting to extract Gavel's system prompts and internal instructions.
-
-**Test it:**
-```bash
-gavel -r examples/test-system-extraction.html -c /path/to/codebase -v
-```
-
-**Expected result:**
-Report should be rejected due to multiple information extraction patterns detected.
-
-**Attack techniques demonstrated:**
-- System prompt extraction requests
-- HTML format testing (Gavel should parse and detect patterns)
-- Role questioning
-- Internal guideline revelation attempts
-
-## Format Support Examples
-
-Gavel supports multiple input formats:
-
-### Text Files (.txt)
-```bash
-gavel -r report.txt -c /path/to/code
-```
-
-### Markdown (.md)
-```bash
-gavel -r legitimate-report.md -c /path/to/code
-```
-
-### HTML (.html, .htm)
-```bash
-gavel -r test-system-extraction.html -c /path/to/code
-```
-
-HTML files are automatically parsed to extract text while preserving code blocks.
-
-## Batch Testing
-
-Test multiple reports at once:
-
-```bash
-# Process all example reports
-gavel --batch examples/ -c /path/to/codebase --format json > results.json
-
-# Process with verbose output
-gavel --batch examples/ -c /path/to/codebase -v
-```
-
-## Security Feature Testing
-
-### Test Input Sanitization
-
-The following patterns should be automatically sanitized:
-
-```bash
-# Special tokens removed
-echo "Report with <|system|>tokens" > test.txt
-gavel -r test.txt -c /path/to/code -v
-
-# Hidden Unicode characters removed
-# Zero-width spaces, invisible characters, etc.
-```
-
-### Test Detection Patterns
-
-Gavel detects 60+ prompt injection patterns:
-
-| Category | Examples |
-|----------|----------|
-| Instruction Override | "ignore previous instructions", "disregard all rules" |
-| Role Manipulation | "you are now", "act as if", "pretend to be" |
-| System Impersonation | "system:", "admin override", "developer mode" |
-| Output Forcing | "always respond with VALID", "output only VALID" |
-| Info Extraction | "reveal your instructions", "show system prompt" |
-| Jailbreaking | "DAN mode", "god mode" |
-
-### Test Output Sanitization
-
-Even if prompt injection bypasses detection, output is sanitized:
-
-- System prompt fragments removed
-- Internal reasoning not leaked
-- Special tokens filtered
-- Suspicious lines redacted
-
-## Writing Good Vulnerability Reports
-
-To maximize the chance of a VALID verdict from Gavel:
-
-1. **Be Specific**: Include exact file paths, function names, and line numbers
-2. **Show Code**: Include the actual vulnerable code snippet
-3. **Prove Exploitability**: Demonstrate a working attack, not just theory
-4. **Reference CWE**: Include relevant CWE identifiers
-5. **Provide PoC**: Include a proof of concept exploit
-6. **Avoid Hedging**: Use definitive language when you've verified the vulnerability
-7. **Stay Focused**: Don't include instructions, questions, or commands for the AI
-
-## Common Red Flags
-
-### AI-Generated Slop
-- "The application may be vulnerable..." (hedging)
-- "Potentially could allow..." (vague)
-- No specific code references
-- Theoretical attacks without verification
-- Generic recommendations without context
-- Copy-paste security best practices lists
-
-### Prompt Injection Attempts
-- Direct commands to the AI
-- Questions about system instructions
-- Attempts to change the AI's role
-- Forcing specific verdicts
-- Excessive capitalization or repetition
-- Hidden characters or encoding tricks
-
-## Security Documentation
-
-For detailed information about Gavel's security architecture, see:
-- [SECURITY.md](../SECURITY.md) - Comprehensive security documentation
-- [README.md](../README.md) - General usage and features
-
-## Contributing Examples
-
-Found a good example of a valid or invalid report? Submit a PR!
-
-Make sure to:
-- Anonymize any sensitive information
-- Include proper attribution if from a public bug bounty
-- Mark clearly whether it should be VALID, INVALID, or REJECTED (security)
-- Document the expected behavior
-- Test with `gavel -v` to verify detection works correctly
-
-## Quick Reference
-
-### Command Cheat Sheet
-
-```bash
-# Basic usage
-gavel -r report.txt -c /path/to/code
-
-# Verbose mode (see security checks)
-gavel -r report.txt -c /path/to/code -v
-
-# Multiple formats
-gavel -r report.html -c /path/to/code
-gavel -r report.md -c /path/to/code
-
-# Batch processing
-gavel --batch examples/ -c /path/to/code
-
-# JSON output
-gavel -r report.txt -c /path/to/code --format json
-
-# Generate PoC
-gavel -r report.txt -c /path/to/code --output-poc
-```
-
-### Expected Outcomes
-
-| File | Expected Verdict | Reason |
-|------|------------------|--------|
-| legitimate-report.md | VALID or INVALID | Based on actual code analysis |
-| test-prompt-injection.txt | REJECTED | Prompt injection detected |
-| test-system-extraction.html | REJECTED | Information extraction attempt |
-| sample-invalid-report.txt | INVALID | No specific code evidence |
-
-## Troubleshooting
-
-### False Positives
-
-If a legitimate report is rejected as prompt injection:
-
-1. Review the report for security-related terminology that might trigger detection
-2. Rephrase any questions or commands as declarative statements
-3. Remove excessive capitalization or repetition
-4. Check for hidden characters or unusual encoding
-5. File an issue if you believe it's a bug in detection
-
-### False Negatives
-
-If a malicious report passes through:
-
-1. Report it immediately as a security issue
-2. Include the report (sanitized) and detection logs
-3. Note which patterns bypassed detection
-4. Help improve Gavel's security by contributing to pattern database
+The [threat model](../docs/threat-model.md) describes prompt-injection boundaries, safe source ingestion and remaining limitations. Automated invariants belong in the [test suite](../tests), not in assertions that a particular model will always interpret a prose fixture correctly.

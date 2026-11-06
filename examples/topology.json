@@ -1,0 +1,52 @@
+{
+  "source_id": "deployment",
+  "revision": "demo-deployment-v1",
+  "nodes": [
+    {
+      "id": "customer-api",
+      "kind": "service",
+      "name": "Customer API (demo)",
+      "reportable": true,
+      "exposure": "public",
+      "owner": "customer-platform",
+      "code_paths": ["service.py"],
+      "code_source_ids": ["demo-service"]
+    },
+    {
+      "id": "customer-db",
+      "kind": "database",
+      "name": "Customer data (demo)",
+      "exposure": "internal",
+      "owner": "data-platform"
+    },
+    {
+      "id": "billing-admin",
+      "kind": "service",
+      "name": "Billing administration (demo)",
+      "exposure": "internal",
+      "owner": "billing"
+    }
+  ],
+  "edges": [
+    {
+      "id": "customer-api-to-db",
+      "source": "customer-api",
+      "target": "customer-db",
+      "kind": "reads",
+      "state": "observed",
+      "requires": ["sql-read:customer-api"],
+      "provides": ["read:customer-db"],
+      "evidence": "Illustrative deployment declaration; replace with collector evidence."
+    },
+    {
+      "id": "customer-api-to-billing",
+      "source": "customer-api",
+      "target": "billing-admin",
+      "kind": "connects",
+      "state": "blocked",
+      "requires": [],
+      "provides": [],
+      "evidence": "Illustrative enforced network policy; replace with observed evidence."
+    }
+  ]
+}
