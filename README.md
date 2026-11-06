@@ -4,6 +4,6 @@ Gavel lets companies receive vulnerability reports from security researchers on 
 It uses a connected AI model, company code, system connections, and risk rules to assess reports and consider how smaller weaknesses could combine.
 Follow the [quick start](QUICKSTART.md) to run it locally.
 
-<video src="docs/gavel-demo.mp4" poster="docs/gavel-demo.jpg" controls muted playsinline></video>
+[![Gavel launch video: vulnerability triage that understands your system](docs/gavel-demo.jpg)](docs/gavel-demo.mp4)
 
-[Watch the demo](docs/gavel-demo.mp4)
+The 71-second walkthrough uses the bundled demo service and topology; its model responses are scripted.
