@@ -2,8 +2,8 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Gavel - AI-Powered Vulnerability Verification',
-  description: 'Verify vulnerability reports against codebases using advanced AI models',
+  title: 'Gavel — Vulnerability triage',
+  description: 'Self-hosted vulnerability verification with organization context and evidence-based decisions.',
 }
 
 export default function RootLayout({
@@ -13,7 +13,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="font-mono antialiased bg-white text-black">
+      <body>
         {children}
       </body>
     </html>

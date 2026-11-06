@@ -1,0 +1,35 @@
+services:
+  backend:
+    build: .
+    environment:
+      GAVEL_ADMIN_TOKEN: ${GAVEL_ADMIN_TOKEN:?Set a long random operator token}
+    volumes:
+      - ./gavel.config.example.json:/app/gavel.config.json:ro
+      - ./examples/topology.json:/app/examples/topology.json:ro
+      - ./examples/demo-app:/app/examples/demo-app:ro
+      - gavel-data:/app/data
+    ports:
+      - "127.0.0.1:8080:8080"
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,noexec,nosuid
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    init: true
+    restart: unless-stopped
+  web:
+    build: ./web
+    environment:
+      GAVEL_BACKEND_URL: http://backend:8080
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on: [backend]
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,noexec,nosuid
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    init: true
+    restart: unless-stopped
+volumes:
+  gavel-data:

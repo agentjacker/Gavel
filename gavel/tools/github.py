@@ -1,162 +1,89 @@
-"""GitHub repository handling utilities"""
+"""Isolated HTTPS GitHub checkouts for the legacy command-line verifier."""
 
 import os
 import re
+import shutil
 import tempfile
 from pathlib import Path
 from typing import Optional
 import subprocess
-import hashlib
-
-
-def clone_or_pull_repo(repo_url: str, verbose: bool = False) -> Path:
-    """
-    Clone a GitHub repository or pull if already exists
-
-    Args:
-        repo_url: GitHub repository URL
-        verbose: Enable verbose logging
-
-    Returns:
-        Path to local repository
-
-    Raises:
-        ValueError: If URL is invalid
-        RuntimeError: If git operations fail
-    """
-    # Validate URL
-    if not _is_valid_github_url(repo_url):
-        raise ValueError(f"Invalid GitHub URL: {repo_url}")
-
-    # Create a cache directory for repos
-    cache_dir = Path(tempfile.gettempdir()) / "gavel_repos"
-    cache_dir.mkdir(exist_ok=True)
-
-    # Generate a safe directory name from URL
-    repo_name = _get_repo_name_from_url(repo_url)
-    repo_hash = hashlib.md5(repo_url.encode()).hexdigest()[:8]
-    local_path = cache_dir / f"{repo_name}_{repo_hash}"
-
-    # Check if repo already exists
-    if local_path.exists() and (local_path / ".git").exists():
-        if verbose:
-            print(f"Repository already exists, pulling latest changes...")
-
-        try:
-            # Pull latest changes
-            subprocess.run(
-                ["git", "-C", str(local_path), "pull"],
-                check=True,
-                capture_output=True,
-                text=True,
-                timeout=60
-            )
-
-            if verbose:
-                print(f"Updated repository at {local_path}")
-
-        except subprocess.CalledProcessError as e:
-            if verbose:
-                print(f"Pull failed, using existing version: {e.stderr}")
-            # Continue with existing version if pull fails
-
-    else:
-        # Clone repository
-        if verbose:
-            print(f"Cloning repository: {repo_url}")
-
-        try:
-            # Use depth=1 for faster cloning
-            subprocess.run(
-                ["git", "clone", "--depth", "1", repo_url, str(local_path)],
-                check=True,
-                capture_output=True,
-                text=True,
-                timeout=300  # 5 minutes timeout
-            )
-
-            if verbose:
-                print(f"Cloned repository to {local_path}")
-
-        except subprocess.CalledProcessError as e:
-            raise RuntimeError(f"Failed to clone repository: {e.stderr}")
-
-    return local_path
+from urllib.parse import urlsplit
 
 
 def _is_valid_github_url(url: str) -> bool:
-    """Check if URL is a valid GitHub repository URL"""
-    patterns = [
-        r"^https?://github\.com/[\w\-]+/[\w\-]+/?$",
-        r"^https?://github\.com/[\w\-]+/[\w\-]+\.git$",
-        r"^git@github\.com:[\w\-]+/[\w\-]+\.git$",
-    ]
+    if not isinstance(url, str) or any(c.isspace() or ord(c) < 32 for c in url):
+        return False
+    try:
+        parsed = urlsplit(url)
+        if parsed.scheme != "https" or parsed.netloc != "github.com" or parsed.query or parsed.fragment:
+            return False
+        if parsed.username or parsed.password or parsed.port is not None:
+            return False
+        parts = parsed.path.strip("/").split("/")
+        if len(parts) != 2 or parsed.path not in {f"/{parts[0]}/{parts[1]}", f"/{parts[0]}/{parts[1]}/"}:
+            return False
+        owner, repo = parts
+        return bool(
+            re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9-]{0,38}", owner)
+            and re.fullmatch(r"[A-Za-z0-9_.-]{1,100}", repo)
+            and repo not in {".", "..", ".git"}
+        )
+    except ValueError:
+        return False
 
-    for pattern in patterns:
-        if re.match(pattern, url):
-            return True
 
-    return False
+def _git_environment() -> dict:
+    # Never inherit Git command overrides, alternate object paths, or injected config.
+    environment = {key: value for key, value in os.environ.items() if not key.startswith("GIT_")}
+    environment.update({
+        "GIT_CONFIG_NOSYSTEM": "1",
+        "GIT_CONFIG_GLOBAL": os.devnull,
+        "GIT_TERMINAL_PROMPT": "0",
+        "GIT_LFS_SKIP_SMUDGE": "1",
+    })
+    return environment
+
+
+def clone_or_pull_repo(repo_url: str, verbose: bool = False) -> Path:
+    """Make a fresh checkout; caller owns deletion. No shared or stale cache is used."""
+    if not _is_valid_github_url(repo_url):
+        raise ValueError("Only HTTPS github.com owner/repository URLs without credentials, queries or refs are supported")
+    local_path = Path(tempfile.mkdtemp(prefix="gavel_repo_"))
+    try:
+        subprocess.run(
+            ["git", "-c", f"core.hooksPath={os.devnull}", "-c", "init.templateDir=",
+             "-c", "protocol.allow=never", "-c", "protocol.https.allow=always",
+             "-c", "http.followRedirects=false", "clone", "--depth", "1", "--no-tags",
+             "--", repo_url.rstrip("/"), str(local_path)],
+            check=True, capture_output=True, text=True, timeout=120, env=_git_environment(),
+        )
+        return local_path
+    except (subprocess.SubprocessError, OSError) as error:
+        shutil.rmtree(local_path, ignore_errors=True)
+        raise RuntimeError("Unable to obtain a fresh repository snapshot") from error
 
 
 def _get_repo_name_from_url(url: str) -> str:
-    """Extract repository name from GitHub URL"""
-    # Remove .git suffix
-    url = url.rstrip("/").replace(".git", "")
-
-    # Extract owner/repo
-    match = re.search(r"github\.com[:/]([\w\-]+)/([\w\-]+)", url)
-    if match:
-        return f"{match.group(1)}_{match.group(2)}"
-
-    # Fallback to hash
-    return hashlib.md5(url.encode()).hexdigest()[:16]
+    if not _is_valid_github_url(url):
+        raise ValueError("Invalid GitHub URL")
+    return urlsplit(url).path.strip("/").removesuffix(".git").replace("/", "_")
 
 
 def get_repo_info(repo_path: Path) -> Optional[dict]:
-    """
-    Get information about a git repository
-
-    Args:
-        repo_path: Path to repository
-
-    Returns:
-        Dictionary with repo info or None
-    """
-    if not (repo_path / ".git").exists():
+    if not (repo_path / ".git").is_dir() or (repo_path / ".git").is_symlink():
         return None
-
     info = {}
-
-    try:
-        # Get current branch
-        result = subprocess.run(
-            ["git", "-C", str(repo_path), "branch", "--show-current"],
-            capture_output=True,
-            text=True,
-            check=True
-        )
-        info["branch"] = result.stdout.strip()
-
-        # Get latest commit hash
-        result = subprocess.run(
-            ["git", "-C", str(repo_path), "rev-parse", "HEAD"],
-            capture_output=True,
-            text=True,
-            check=True
-        )
-        info["commit"] = result.stdout.strip()[:8]
-
-        # Get remote URL
-        result = subprocess.run(
-            ["git", "-C", str(repo_path), "remote", "get-url", "origin"],
-            capture_output=True,
-            text=True,
-            check=True
-        )
-        info["remote"] = result.stdout.strip()
-
-    except subprocess.CalledProcessError:
-        pass
-
-    return info if info else None
+    for key, arguments in {
+        "branch": ["branch", "--show-current"],
+        "commit": ["rev-parse", "HEAD"],
+        "remote": ["remote", "get-url", "origin"],
+    }.items():
+        try:
+            result = subprocess.run(
+                ["git", "-C", str(repo_path), *arguments], capture_output=True,
+                text=True, check=True, timeout=5, env=_git_environment(),
+            )
+            info[key] = result.stdout.strip()
+        except (OSError, subprocess.SubprocessError):
+            pass
+    return info or None

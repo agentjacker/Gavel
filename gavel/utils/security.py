@@ -7,9 +7,9 @@ from typing import Optional, Tuple
 # Enhanced patterns for prompt injection detection
 SUSPICIOUS_PATTERNS = [
     # Direct instruction overrides
-    r"ignore\s+(previous|all|above|prior)\s+(instructions?|prompts?|rules?|commands?)",
-    r"disregard\s+(previous|all|above|prior)\s+(instructions?|prompts?|rules?)",
-    r"forget\s+(previous|all|above|your)\s+(instructions?|prompts?|rules?|training)",
+    r"ignore\s+(?:(?:all|any)\s+)?(previous|all|above|prior)\s+(instructions?|prompts?|rules?|commands?)",
+    r"disregard\s+(?:(?:all|any)\s+)?(previous|all|above|prior)\s+(instructions?|prompts?|rules?)",
+    r"forget\s+(?:(?:all|any)\s+)?(previous|all|above|your)\s+(instructions?|prompts?|rules?|training)",
 
     # Role manipulation
     r"you\s+are\s+now\s+(a|an|\w+)",
@@ -298,25 +298,6 @@ def truncate_with_ellipsis(text: str, max_length: int) -> str:
 
 
 def sanitize_for_web_display(text: str) -> str:
-    """
-    Sanitize text for safe web display (basic XSS prevention)
-
-    Args:
-        text: Text to sanitize
-
-    Returns:
-        Sanitized text
-    """
-    # Basic HTML entity encoding
-    replacements = {
-        "<": "&lt;",
-        ">": "&gt;",
-        "&": "&amp;",
-        '"': "&quot;",
-        "'": "&#x27;",
-    }
-
-    for char, entity in replacements.items():
-        text = text.replace(char, entity)
-
-    return text
+    """Escape HTML once; callers should still use their UI's text rendering."""
+    from html import escape
+    return escape(text, quote=True)

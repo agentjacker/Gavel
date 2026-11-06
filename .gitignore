@@ -38,6 +38,9 @@ ENV/
 # Environment variables
 .env
 .env.local
+.env.*.local
+data/
+gavel.config.json
 
 # Testing
 .pytest_cache/
@@ -56,6 +59,7 @@ temp/
 # Node (for web UI)
 node_modules/
 .next/
+*.tsbuildinfo
 out/
 .vercel
 
